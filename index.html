@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Found Discs</title>
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+    <!-- PapaParse for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        img.thumbnail { width: 50px; height: auto; object-fit: cover; }
+        /* Make footer inputs full-width */
+        tfoot input { width: 100%; padding: 3px; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+    <h1>Found Discs Inventory</h1>
+    <table id="discsTable" class="display">
+        <thead>
+            <tr>
+                <th>Date Found</th>
+                <th>Type</th>
+                <th>Brand</th>
+                <th>Mold</th>
+                <th>Color</th>
+                <th>Phone (Last 4 Digits)</th>
+                <th>Image</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+            <tr>
+                <th>Date Found</th>
+                <th>Type</th>
+                <th>Brand</th>
+                <th>Mold</th>
+                <th>Color</th>
+                <th>Phone (Last 4 Digits)</th>
+                <th>Image</th>
+            </tr>
+        </tfoot>
+    </table>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script>
+        // Replace with your actual published CSV URL from Google Sheets "Publish to Web"
+        // Example: https://docs.google.com/spreadsheets/d/{SHEET_ID}/pub?gid={GID_FOR_LOG_SHEET}&single=true&output=csv
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQt7hOgFYgh4eWQaL8FhC-csrjn1qA0a-gwfn9PHGmjFu4VrjZuOD6-L_2Pu1AhjoJ-iKzyP9ka0r6Q/pubhtml?gid=0&single=true';
+
+        async function fetchDiscs() {
+            try {
+                const response = await fetch(CSV_URL);
+                if (!response.ok) throw new Error('Failed to fetch CSV');
+                const csvText = await response.text();
+
+                // Parse CSV using PapaParse
+                Papa.parse(csvText, {
+                    header: false, // No headers in parsing; we'll skip first row manually
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        const data = results.data;
+                        if (data.length === 0) throw new Error('No data in CSV');
+
+                        const tbody = document.querySelector('#discsTable tbody');
+                        tbody.innerHTML = ''; // Clear existing rows
+
+                        data.forEach((row, index) => {
+                            if (index === 0) return; // Skip header row
+
+                            const dateFound = row[0] || '';
+                            const type = row[1] || '';
+                            const brand = row[2] || '';
+                            const mold = row[3] || '';
+                            const color = row[4] || '';
+                            const phone = row[5] || '';
+                            const imageUrl = row[6] || '';
+
+                            // Mask phone to last 4 digits
+                            const maskedPhone = phone ? '****' + phone.slice(-4) : '';
+
+                            // Create row
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td>${dateFound}</td>
+                                <td>${type}</td>
+                                <td>${brand}</td>
+                                <td>${mold}</td>
+                                <td>${color}</td>
+                                <td>${maskedPhone}</td>
+                                <td>${imageUrl ? `<img src="${imageUrl}" alt="Disc Image" class="thumbnail">` : 'No Image'}</td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+
+                        // Initialize DataTables after data is loaded
+                        initDataTable();
+                    },
+                    error: function(error) {
+                        console.error('PapaParse error:', error);
+                        document.querySelector('#discsTable tbody').innerHTML = '<tr><td colspan="7">Error parsing data. Check console.</td></tr>';
+                    }
+                });
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                document.querySelector('#discsTable tbody').innerHTML = '<tr><td colspan="7">Error loading data. Check console.</td></tr>';
+            }
+        }
+
+        function initDataTable() {
+            $('#discsTable').DataTable({
+                // Enable sorting on all columns except Image (index 6)
+                columnDefs: [
+                    { orderable: false, targets: 6 } // Disable sorting on Image
+                ],
+                // Add footer filters
+                initComplete: function () {
+                    this.api().columns().every(function () {
+                        var column = this;
+                        var input = $(column.footer()).find('input');
+                        if (input.length === 0) {
+                            input = $('<input type="text" placeholder="Filter..."/>').appendTo($(column.footer()).empty());
+                        }
+                        input.on('keyup change clear', function () {
+                            if (column.search() !== this.value) {
+                                column.search(this.value).draw();
+                            }
+                        });
+                    });
+                }
+            });
+        }
+
+        // Load data on page load
+        fetchDiscs();
+    </script>
+</body>
+</html>
