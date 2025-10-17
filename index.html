@@ -129,7 +129,7 @@
 
         function initDataTable() {
             // Custom date range filter for DataTables
-            let minDate, maxDate;
+            let minDate = null, maxDate = null;
             $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
                 const dateStr = data[0]; // Date Found column
                 if (!dateStr) return true; // No date? Show it
@@ -146,6 +146,8 @@
 
             const table = $('#discsTable').DataTable({
                 orderCellsTop: true, // Important for multi-row headers
+                pageLength: 100, // Default to showing 100 entries
+                lengthMenu: [10, 25, 50, 100, 'All'], // Options for the dropdown
                 // Enable sorting on all columns except Image (index 6)
                 columnDefs: [
                     { orderable: false, targets: 6 } // Disable sorting on Image
@@ -169,6 +171,7 @@
                             flatpickr(input[0], {
                                 mode: "range",
                                 dateFormat: "m/d/Y", // Assume MM/DD/YYYY; change to "Y-m-d" if YYYY-MM-DD in sheet
+                                defaultDate: [], // Explicitly set no default date to start unfiltered
                                 onChange: function(selectedDates) {
                                     minDate = selectedDates[0] ? selectedDates[0] : null;
                                     maxDate = selectedDates[1] ? selectedDates[1] : null;
