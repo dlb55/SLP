@@ -6,17 +6,21 @@
     <title>Found Discs</title>
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+    <!-- Flatpickr CSS for date range picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <!-- PapaParse for CSV parsing -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; }
         img.thumbnail { width: 50px; height: auto; object-fit: cover; }
-        /* Make footer inputs full-width */
-        tfoot input { width: 100%; padding: 3px; box-sizing: border-box; }
+        /* Make header filter inputs full-width */
+        thead input { width: 100%; padding: 3px; box-sizing: border-box; }
+        /* Hide footer since we're moving filters to header */
+        tfoot { display: none; }
     </style>
 </head>
 <body>
-    <h1>Found Discs Inventory</h1>
+    <h1>Shane's Found Disc Inventory</h1>
     <table id="discsTable" class="display">
         <thead>
             <tr>
@@ -28,8 +32,19 @@
                 <th>Phone (Last 4 Digits)</th>
                 <th>Image</th>
             </tr>
+            <!-- Second row for filters, placed under headers but above data -->
+            <tr>
+                <th></th> <!-- Placeholder for Date Found filter (added via JS) -->
+                <th></th> <!-- Type -->
+                <th></th> <!-- Brand -->
+                <th></th> <!-- Mold -->
+                <th></th> <!-- Color -->
+                <th></th> <!-- Phone -->
+                <th></th> <!-- Image (no filter) -->
+            </tr>
         </thead>
         <tbody></tbody>
+        <!-- Footer is hidden, but kept for structure if needed later -->
         <tfoot>
             <tr>
                 <th>Date Found</th>
@@ -47,9 +62,10 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <!-- Flatpickr JS for date range -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
-        // Replace with your actual published CSV URL from Google Sheets "Publish to Web"
-        // Example: https://docs.google.com/spreadsheets/d/{SHEET_ID}/pub?gid={GID_FOR_LOG_SHEET}&single=true&output=csv
+        // Actual published CSV URL
         const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQt7hOgFYgh4eWQaL8FhC-csrjn1qA0a-gwfn9PHGmjFu4VrjZuOD6-L_2Pu1AhjoJ-iKzyP9ka0r6Q/pub?gid=0&single=true&output=csv';
 
         async function fetchDiscs() {
@@ -112,24 +128,56 @@
         }
 
         function initDataTable() {
-            $('#discsTable').DataTable({
+            // Custom date range filter for DataTables
+            let minDate, maxDate;
+            $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+                const dateStr = data[0]; // Date Found column
+                if (!dateStr) return true; // No date? Show it
+
+                // Parse date assuming format like MM/DD/YYYY or YYYY-MM-DD (adjust parser if needed)
+                const date = new Date(dateStr);
+                if (isNaN(date)) return true; // Invalid date? Show it
+
+                if ((minDate === null || date >= minDate) && (maxDate === null || date <= maxDate)) {
+                    return true;
+                }
+                return false;
+            });
+
+            const table = $('#discsTable').DataTable({
                 // Enable sorting on all columns except Image (index 6)
                 columnDefs: [
                     { orderable: false, targets: 6 } // Disable sorting on Image
                 ],
-                // Add footer filters
+                // Add filters to the second header row
                 initComplete: function () {
-                    this.api().columns().every(function () {
-                        var column = this;
-                        var input = $(column.footer()).find('input');
-                        if (input.length === 0) {
-                            input = $('<input type="text" placeholder="Filter..."/>').appendTo($(column.footer()).empty());
+                    this.api().columns().every(function (index) {
+                        const column = this;
+                        const header = $(column.header()).parent().next('tr').children().eq(index); // Second <tr> in <thead>
+
+                        // Skip filter for Image column (index 6)
+                        if (index === 6) return;
+
+                        let input;
+                        if (index === 0) { // Date Found: Add Flatpickr range picker
+                            input = $('<input type="text" placeholder="Select date range..."/>').appendTo(header.empty());
+                            flatpickr(input[0], {
+                                mode: "range",
+                                dateFormat: "Y-m-d", // Adjust based on your sheet's date format (e.g., "m/d/Y" for MM/DD/YYYY)
+                                onChange: function(selectedDates) {
+                                    minDate = selectedDates[0] ? selectedDates[0] : null;
+                                    maxDate = selectedDates[1] ? selectedDates[1] : null;
+                                    table.draw(); // Redraw table with custom filter
+                                }
+                            });
+                        } else { // Text filters for other columns
+                            input = $('<input type="text" placeholder="Filter..."/>').appendTo(header.empty());
+                            input.on('keyup change clear', function () {
+                                if (column.search() !== this.value) {
+                                    column.search(this.value).draw();
+                                }
+                            });
                         }
-                        input.on('keyup change clear', function () {
-                            if (column.search() !== this.value) {
-                                column.search(this.value).draw();
-                            }
-                        });
                     });
                 }
             });
