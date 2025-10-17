@@ -33,7 +33,7 @@
                 <th>Image</th>
             </tr>
             <!-- Second row for filters, placed under headers but above data -->
-            <tr>
+            <tr class="filters">
                 <th></th> <!-- Placeholder for Date Found filter (added via JS) -->
                 <th></th> <!-- Type -->
                 <th></th> <!-- Brand -->
@@ -145,33 +145,37 @@
             });
 
             const table = $('#discsTable').DataTable({
+                orderCellsTop: true, // Important for multi-row headers
                 // Enable sorting on all columns except Image (index 6)
                 columnDefs: [
                     { orderable: false, targets: 6 } // Disable sorting on Image
                 ],
                 // Add filters to the second header row
                 initComplete: function () {
-                    this.api().columns().every(function (index) {
+                    const api = this.api();
+                    api.columns().eq(0).every(function (colIdx) {
                         const column = this;
-                        const header = $(column.header()).parent().next('tr').children().eq(index); // Second <tr> in <thead>
+                        // Get the filter cell using adjusted index
+                        const cell = $('.filters th').eq($(api.column(colIdx).header()).index());
 
-                        // Skip filter for Image column (index 6)
-                        if (index === 6) return;
+                        // Skip filter for Image column (colIdx 6)
+                        if (colIdx === 6) return;
 
+                        cell.empty();
                         let input;
-                        if (index === 0) { // Date Found: Add Flatpickr range picker
-                            input = $('<input type="text" placeholder="Select date range..."/>').appendTo(header.empty());
+                        if (colIdx === 0) { // Date Found: Add Flatpickr range picker
+                            input = $('<input type="text" placeholder="Select date range..."/>').appendTo(cell);
                             flatpickr(input[0], {
                                 mode: "range",
-                                dateFormat: "Y-m-d", // Adjust based on your sheet's date format (e.g., "m/d/Y" for MM/DD/YYYY)
+                                dateFormat: "m/d/Y", // Assume MM/DD/YYYY; change to "Y-m-d" if YYYY-MM-DD in sheet
                                 onChange: function(selectedDates) {
                                     minDate = selectedDates[0] ? selectedDates[0] : null;
                                     maxDate = selectedDates[1] ? selectedDates[1] : null;
-                                    table.draw(); // Redraw table with custom filter
+                                    api.draw(); // Redraw table with custom filter
                                 }
                             });
                         } else { // Text filters for other columns
-                            input = $('<input type="text" placeholder="Filter..."/>').appendTo(header.empty());
+                            input = $('<input type="text" placeholder="Filter..."/>').appendTo(cell);
                             input.on('keyup change clear', function () {
                                 if (column.search() !== this.value) {
                                     column.search(this.value).draw();
