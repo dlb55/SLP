@@ -94,7 +94,16 @@
                             const mold = row[3] || '';
                             const color = row[4] || '';
                             const phone = row[5] || '';
-                            const imageUrl = row[6] || '';
+                            let imageUrl = row[6] || '';
+
+                            // If it's a Google Drive sharing link, convert to direct image URL
+                            if (imageUrl.includes('drive.google.com')) {
+                                const match = imageUrl.match(/\/d\/(.*?)\//);
+                                if (match && match[1]) {
+                                    const id = match[1];
+                                    imageUrl = `https://drive.google.com/uc?id=${id}`;
+                                }
+                            }
 
                             // Mask phone to last 4 digits
                             const maskedPhone = phone ? '****' + phone.slice(-4) : '';
