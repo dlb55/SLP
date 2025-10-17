@@ -24,7 +24,7 @@
     <table id="discsTable" class="display">
         <thead>
             <tr>
-                <th>Date Found</th>
+                <th>Date Posted</th>
                 <th>Type</th>
                 <th>Brand</th>
                 <th>Mold</th>
@@ -34,7 +34,7 @@
             </tr>
             <!-- Second row for filters, placed under headers but above data -->
             <tr class="filters">
-                <th></th> <!-- Placeholder for Date Found filter (added via JS) -->
+                <th></th> <!-- Placeholder for Date Posted filter (added via JS) -->
                 <th></th> <!-- Type -->
                 <th></th> <!-- Brand -->
                 <th></th> <!-- Mold -->
@@ -47,7 +47,7 @@
         <!-- Footer is hidden, but kept for structure if needed later -->
         <tfoot>
             <tr>
-                <th>Date Found</th>
+                <th>Date Posted</th>
                 <th>Type</th>
                 <th>Brand</th>
                 <th>Mold</th>
@@ -88,36 +88,27 @@
                         data.forEach((row, index) => {
                             if (index === 0) return; // Skip header row
 
-                            const dateFound = row[0] || '';
+                            const datePosted = row[0] || '';
                             const type = row[1] || '';
                             const brand = row[2] || '';
                             const mold = row[3] || '';
                             const color = row[4] || '';
                             const phone = row[5] || '';
-                            let imageUrl = row[6] || '';
-
-                            // If it's a Google Drive sharing link, convert to direct image URL
-                            if (imageUrl.includes('drive.google.com')) {
-                                const match = imageUrl.match(/\/d\/(.*?)\//);
-                                if (match && match[1]) {
-                                    const id = match[1];
-                                    imageUrl = `https://drive.google.com/uc?id=${id}`;
-                                }
-                            }
+                            const imageUrl = row[6] || '';
 
                             // Mask phone to last 4 digits
                             const maskedPhone = phone ? '****' + phone.slice(-4) : '';
 
-                            // Create row
+                            // Create row with hyperlink for image
                             const tr = document.createElement('tr');
                             tr.innerHTML = `
-                                <td>${dateFound}</td>
+                                <td>${datePosted}</td>
                                 <td>${type}</td>
                                 <td>${brand}</td>
                                 <td>${mold}</td>
                                 <td>${color}</td>
                                 <td>${maskedPhone}</td>
-                                <td>${imageUrl ? `<img src="${imageUrl}" alt="Disc Image" class="thumbnail">` : 'No Image'}</td>
+                                <td>${imageUrl ? `<a href="${imageUrl}" target="_blank">Disc Image</a>` : 'No Image'}</td>
                             `;
                             tbody.appendChild(tr);
                         });
@@ -140,7 +131,7 @@
             // Custom date range filter for DataTables
             let minDate = null, maxDate = null;
             $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
-                const dateStr = data[0]; // Date Found column
+                const dateStr = data[0]; // Date Posted column
                 if (!dateStr) return true; // No date? Show it
 
                 // Parse date assuming format like MM/DD/YYYY or YYYY-MM-DD (adjust parser if needed)
@@ -175,7 +166,7 @@
 
                         cell.empty();
                         let input;
-                        if (colIdx === 0) { // Date Found: Add Flatpickr range picker
+                        if (colIdx === 0) { // Date Posted: Add Flatpickr range picker
                             input = $('<input type="text" placeholder="Select date range..."/>').appendTo(cell);
                             flatpickr(input[0], {
                                 mode: "range",
