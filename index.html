@@ -153,10 +153,11 @@
                 // Add filters to the second header row
                 initComplete: function () {
                     const api = this.api();
-                    api.columns().eq(0).every(function (colIdx) {
+                    api.columns().every(function () {
+                        const colIdx = this.index();
                         const column = this;
-                        // Get the filter cell using adjusted index
-                        const cell = $('.filters th').eq($(api.column(colIdx).header()).index());
+                        // Get the filter cell
+                        const cell = $('.filters th').eq(colIdx);
 
                         // Skip filter for Image column (colIdx 6)
                         if (colIdx === 6) return;
@@ -171,7 +172,7 @@
                                 onChange: function(selectedDates) {
                                     minDate = selectedDates[0] ? selectedDates[0] : null;
                                     maxDate = selectedDates[1] ? selectedDates[1] : null;
-                                    api.draw(); // Redraw table with custom filter
+                                    table.draw(); // Redraw table with custom filter
                                 }
                             });
                         } else { // Text filters for other columns
